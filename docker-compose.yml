@@ -1,0 +1,119 @@
+version: "3.9"
+
+services:
+  # ── PostgreSQL ──────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-findflix}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-findflix_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-findflix}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U findflix"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ── Redis ───────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ── FastAPI Backend ─────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-findflix}:${POSTGRES_PASSWORD:-findflix_dev}@postgres:5432/${POSTGRES_DB:-findflix}
+      REDIS_URL: redis://redis:6379/0
+      TMDB_API_KEY: ${TMDB_API_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-findflix-dev}
+      ML_SERVICE_URL: http://ml_service:8001
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DEBUG: ${DEBUG:-true}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+
+  # ── Celery Worker ───────────────────────────────────────────
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=2
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-findflix}:${POSTGRES_PASSWORD:-findflix_dev}@postgres:5432/${POSTGRES_DB:-findflix}
+      REDIS_URL: redis://redis:6379/0
+      TMDB_API_KEY: ${TMDB_API_KEY}
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      ML_SERVICE_URL: http://ml_service:8001
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Celery Beat (scheduler) ────────────────────────────────
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A app.tasks.celery_app beat --loglevel=info
+    restart: unless-stopped
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # ── ML Recommendation Service ──────────────────────────────
+  ml_service:
+    build:
+      context: ./ml_service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      MODEL_PATH: /models
+      EMBEDDING_DIM: 128
+      TOP_K: 100
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./ml_service:/app
+      - mlmodels:/models
+
+volumes:
+  pgdata:
+  redisdata:
+  mlmodels:
