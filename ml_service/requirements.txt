@@ -1,0 +1,13 @@
+tensorflow>=2.13
+tensorflow-recommenders
+numpy
+pandas
+scikit-learn
+fastapi
+uvicorn[standard]
+pydantic>=2.0
+pydantic-settings
+redis
+structlog
+httpx
+pytest

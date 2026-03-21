@@ -1,0 +1,21 @@
+version: "3.9"
+
+# Development overrides — use with:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  backend:
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      DEBUG: "true"
+      ENVIRONMENT: development
+
+  ml_service:
+    command: uvicorn ml_service.app:app --host 0.0.0.0 --port 8001 --reload
+    environment:
+      DEBUG: "true"
+
+  celery_worker:
+    command: >
+      watchmedo auto-restart --directory=./app --pattern=*.py --recursive --
+      celery -A app.tasks.celery_app worker --loglevel=debug --concurrency=1
