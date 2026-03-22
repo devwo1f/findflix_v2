@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 import structlog
 from sqlalchemy import select
@@ -48,6 +48,14 @@ async def _sync_trending_async() -> int:
                     )
                     title = existing.scalar_one_or_none()
 
+                    raw_date = item.get("release_date") or item.get("first_air_date")
+                    parsed_date = None
+                    if raw_date:
+                        try:
+                            parsed_date = date.fromisoformat(raw_date)
+                        except (ValueError, TypeError):
+                            pass
+
                     if title:
                         title.popularity = item.get("popularity", 0)
                         title.vote_average = item.get("vote_average", 0)
@@ -62,7 +70,7 @@ async def _sync_trending_async() -> int:
                             overview=item.get("overview"),
                             poster_path=item.get("poster_path"),
                             backdrop_path=item.get("backdrop_path"),
-                            release_date=item.get("release_date") or item.get("first_air_date"),
+                            release_date=parsed_date,
                             vote_average=item.get("vote_average", 0),
                             vote_count=item.get("vote_count", 0),
                             popularity=item.get("popularity", 0),

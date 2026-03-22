@@ -179,9 +179,8 @@ final questionnaireProvider =
 final hasCompletedQuestionnaireProvider = FutureProvider<bool>((ref) async {
   try {
     final api = ref.read(apiClientProvider);
-    final data =
-        await api.get<Map<String, dynamic>>(ApiConstants.getQuestionnaire);
-    return data['completed'] as bool? ?? false;
+    await api.get<Map<String, dynamic>>(ApiConstants.getQuestionnaire);
+    return true;
   } catch (_) {
     return false;
   }

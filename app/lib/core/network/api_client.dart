@@ -46,10 +46,22 @@ class ApiError implements Exception {
   static String _extractMessage(Response? response) {
     if (response?.data is Map) {
       final data = response!.data as Map;
-      return data['message'] as String? ??
-          data['error'] as String? ??
-          data['detail'] as String? ??
-          'Something went wrong (${response.statusCode})';
+      if (data['message'] is String) return data['message'] as String;
+      if (data['error'] is String) return data['error'] as String;
+
+      final detail = data['detail'];
+      if (detail is String) return detail;
+      if (detail is List && detail.isNotEmpty) {
+        final first = detail.first;
+        if (first is Map) {
+          final msg = first['msg'] as String? ?? '';
+          final loc = (first['loc'] as List?)?.join(' > ') ?? '';
+          return loc.isNotEmpty ? '$loc: $msg' : msg;
+        }
+        return first.toString();
+      }
+
+      return 'Something went wrong (${response.statusCode})';
     }
     return 'Something went wrong (${response?.statusCode})';
   }

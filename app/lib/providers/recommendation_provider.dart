@@ -10,7 +10,7 @@ final recommendationsProvider =
     FutureProvider.autoDispose<List<Recommendation>>((ref) async {
   final api = ref.read(apiClientProvider);
   final data = await api.get<Map<String, dynamic>>(ApiConstants.personalized);
-  final list = data['recommendations'] as List<dynamic>? ?? [];
+  final list = data['items'] as List<dynamic>? ?? [];
   return list
       .map((e) => Recommendation.fromJson(e as Map<String, dynamic>))
       .toList();
@@ -22,7 +22,7 @@ final trendingProvider =
     FutureProvider.autoDispose<List<Recommendation>>((ref) async {
   final api = ref.read(apiClientProvider);
   final data = await api.get<Map<String, dynamic>>(ApiConstants.trending);
-  final list = data['results'] as List<dynamic>? ?? [];
+  final list = data['items'] as List<dynamic>? ?? [];
   return list
       .map((e) => Recommendation.fromJson(e as Map<String, dynamic>))
       .toList();
@@ -35,7 +35,7 @@ final becauseYouLikedProvider =
   final api = ref.read(apiClientProvider);
   final data =
       await api.get<Map<String, dynamic>>(ApiConstants.becauseYouLiked);
-  final list = data['results'] as List<dynamic>? ?? [];
+  final list = data['items'] as List<dynamic>? ?? [];
   return list
       .map((e) => Recommendation.fromJson(e as Map<String, dynamic>))
       .toList();
@@ -100,7 +100,7 @@ class RecommendationFeedNotifier
         ApiConstants.recommendations,
         queryParameters: {'page': _page, 'limit': 10},
       );
-      final list = (data['results'] as List<dynamic>? ?? [])
+      final list = (data['items'] as List<dynamic>? ?? [])
           .map((e) => Recommendation.fromJson(e as Map<String, dynamic>))
           .toList();
 
@@ -148,7 +148,7 @@ class RecommendationFeedbackService {
   Future<void> submit(RecommendationFeedback feedback) async {
     final api = _ref.read(apiClientProvider);
     await api.post(
-      ApiConstants.recommendationFeedback,
+      ApiConstants.recommendationFeedback(feedback.recommendationId),
       data: feedback.toJson(),
     );
   }

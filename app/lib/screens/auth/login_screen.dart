@@ -176,7 +176,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         if (v == null || v.isEmpty) {
                           return 'Password is required';
                         }
-                        if (v.length < 6) return 'At least 6 characters';
+                        if (v.length < 8) return 'At least 8 characters';
                         return null;
                       },
                     ).animate().fadeIn(delay: 300.ms, duration: 400.ms),

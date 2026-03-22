@@ -21,10 +21,8 @@ final titleDetailProvider =
 final similarTitlesProvider =
     FutureProvider.autoDispose.family<List<TitleModel>, String>((ref, id) async {
   final api = ref.read(apiClientProvider);
-  final data =
-      await api.get<Map<String, dynamic>>(ApiConstants.similarTitles(id));
-  final list = data['results'] as List<dynamic>? ?? [];
-  return list
+  final data = await api.get<List<dynamic>>(ApiConstants.similarTitles(id));
+  return data
       .map((e) => TitleModel.fromJson(e as Map<String, dynamic>))
       .toList();
 });
@@ -88,7 +86,7 @@ final searchResultsProvider =
     queryParameters: params,
   );
 
-  final list = data['results'] as List<dynamic>? ?? [];
+  final list = data['items'] as List<dynamic>? ?? [];
   return list
       .map((e) => TitleModel.fromJson(e as Map<String, dynamic>))
       .toList();

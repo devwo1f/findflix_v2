@@ -1,10 +1,11 @@
 import enum
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from sqlalchemy import (
     ARRAY,
     Boolean,
+    Date,
     DateTime,
     Enum,
     Float,
@@ -126,13 +127,13 @@ class Title(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_new_uuid)
     tmdb_id: Mapped[int] = mapped_column(Integer, unique=True, nullable=False, index=True)
-    title_type: Mapped[TitleType] = mapped_column(Enum(TitleType, name="title_type", create_type=False), nullable=False, index=True)
+    title_type: Mapped[TitleType] = mapped_column(Enum(TitleType, name="title_type", create_type=False, values_callable=lambda e: [x.value for x in e]), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(500), nullable=False)
     original_name: Mapped[str | None] = mapped_column(String(500))
     overview: Mapped[str | None] = mapped_column(Text)
     poster_path: Mapped[str | None] = mapped_column(String(500))
     backdrop_path: Mapped[str | None] = mapped_column(String(500))
-    release_date: Mapped[str | None] = mapped_column(String(20))
+    release_date: Mapped[date | None] = mapped_column(Date)
     vote_average: Mapped[float | None] = mapped_column(Float, default=0.0)
     vote_count: Mapped[int | None] = mapped_column(Integer, default=0)
     popularity: Mapped[float | None] = mapped_column(Float, default=0.0)
@@ -169,7 +170,7 @@ class RegionalAvailability(Base):
     title_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("titles.id", ondelete="CASCADE"), nullable=False)
     region: Mapped[str] = mapped_column(String(10), nullable=False)
     provider_name: Mapped[str] = mapped_column(String(200), nullable=False)
-    provider_type: Mapped[ProviderType] = mapped_column(Enum(ProviderType, name="provider_type", create_type=False), nullable=False)
+    provider_type: Mapped[ProviderType] = mapped_column(Enum(ProviderType, name="provider_type", create_type=False, values_callable=lambda e: [x.value for x in e]), nullable=False)
     provider_logo_path: Mapped[str | None] = mapped_column(String(500))
     link: Mapped[str | None] = mapped_column(String(1000))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)

@@ -55,10 +55,14 @@ class WatchlistNotifier extends StateNotifier<WatchlistState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final api = _ref.read(apiClientProvider);
-      final data =
-          await api.get<Map<String, dynamic>>(ApiConstants.watchlist);
-      final list = (data['results'] as List<dynamic>? ?? [])
-          .map((e) => TitleModel.fromJson(e as Map<String, dynamic>))
+      final data = await api.get<List<dynamic>>(ApiConstants.watchlist);
+      final list = data
+          .map((e) {
+            final entry = e as Map<String, dynamic>;
+            final titleData = entry['title'] as Map<String, dynamic>?;
+            return titleData != null ? TitleModel.fromJson(titleData) : null;
+          })
+          .whereType<TitleModel>()
           .toList();
       state = state.copyWith(items: list, isLoading: false);
     } catch (e) {
@@ -108,11 +112,14 @@ class WatchlistNotifier extends StateNotifier<WatchlistState> {
 final watchHistoryProvider =
     FutureProvider.autoDispose<List<TitleModel>>((ref) async {
   final api = ref.read(apiClientProvider);
-  final data =
-      await api.get<Map<String, dynamic>>(ApiConstants.watchHistory);
-  final list = data['results'] as List<dynamic>? ?? [];
-  return list
-      .map((e) => TitleModel.fromJson(e as Map<String, dynamic>))
+  final data = await api.get<List<dynamic>>(ApiConstants.watchHistory);
+  return data
+      .map((e) {
+        final entry = e as Map<String, dynamic>;
+        final titleData = entry['title'] as Map<String, dynamic>?;
+        return titleData != null ? TitleModel.fromJson(titleData) : null;
+      })
+      .whereType<TitleModel>()
       .toList();
 });
 
@@ -146,7 +153,15 @@ class MarkWatchedService {
 final tasteProfileProvider =
     FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
   final api = ref.read(apiClientProvider);
-  return await api.get<Map<String, dynamic>>(ApiConstants.tasteProfile);
+  try {
+    final data = await api.get<Map<String, dynamic>>(ApiConstants.tasteProfile);
+    return {
+      'top_genres': data['genre_preferences'] ?? [],
+      'top_moods': data['mood_preferences'] ?? [],
+    };
+  } catch (_) {
+    return {'top_genres': <String>[], 'top_moods': <String>[]};
+  }
 });
 
 // ── Dashboard Aggregate ───────────────────────────────────────────────

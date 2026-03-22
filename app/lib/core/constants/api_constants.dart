@@ -18,8 +18,8 @@ class ApiConstants {
   static const String signup = '/auth/signup';
   static const String logout = '/auth/logout';
   static const String refreshToken = '/auth/refresh';
-  static const String resetPassword = '/auth/reset-password';
-  static const String profile = '/auth/profile';
+  static const String resetPassword = '/auth/password-reset';
+  static const String profile = '/auth/me';
 
   // ── Questionnaire ────────────────────────────────────────────────
   static const String submitQuestionnaire = '/questionnaire';
@@ -28,9 +28,10 @@ class ApiConstants {
   // ── Recommendations ──────────────────────────────────────────────
   static const String recommendations = '/recommendations';
   static const String trending = '/recommendations/trending';
-  static const String personalized = '/recommendations/personalized';
-  static const String becauseYouLiked = '/recommendations/because-you-liked';
-  static const String recommendationFeedback = '/recommendations/feedback';
+  static const String personalized = '/recommendations';
+  static const String becauseYouLiked = '/recommendations';
+  static String recommendationFeedback(String recId) =>
+      '/recommendations/$recId/feedback';
 
   // ── Titles ───────────────────────────────────────────────────────
   static const String titles = '/titles';
@@ -40,25 +41,25 @@ class ApiConstants {
   static const String search = '/titles/search';
 
   // ── Watchlist ────────────────────────────────────────────────────
-  static const String watchlist = '/watchlist';
-  static String watchlistItem(String id) => '/watchlist/$id';
+  static const String watchlist = '/users/watchlist';
+  static String watchlistItem(String id) => '/users/watchlist/$id';
 
   // ── Watch History ────────────────────────────────────────────────
-  static const String watchHistory = '/history';
-  static String historyItem(String id) => '/history/$id';
+  static const String watchHistory = '/users/watch-history';
+  static String historyItem(String id) => '/users/watch-history/$id';
 
   // ── User ─────────────────────────────────────────────────────────
-  static const String userProfile = '/user/profile';
-  static const String userStats = '/user/stats';
-  static const String userPreferences = '/user/preferences';
-  static const String tasteProfile = '/user/taste-profile';
+  static const String userProfile = '/users/profile';
+  static const String userStats = '/users/dashboard';
+  static const String userPreferences = '/questionnaire';
+  static const String tasteProfile = '/questionnaire';
 
   // ── Admin ────────────────────────────────────────────────────────
   static const String adminStats = '/admin/stats';
   static const String adminUsers = '/admin/users';
-  static const String adminLogs = '/admin/logs';
-  static const String adminSync = '/admin/sync-tmdb';
-  static const String adminModelInfo = '/admin/model-info';
+  static const String adminLogs = '/admin/recommendations/logs';
+  static const String adminSync = '/admin/sync/tmdb';
+  static const String adminModelInfo = '/admin/model/info';
 
   // ── TMDb Image Base ──────────────────────────────────────────────
   static const String tmdbImageBase = 'https://image.tmdb.org/t/p';
