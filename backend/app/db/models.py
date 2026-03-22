@@ -36,15 +36,15 @@ class Base(DeclarativeBase):
 # ---------------------------------------------------------------------------
 
 class TitleType(str, enum.Enum):
-    MOVIE = "MOVIE"
-    TV = "TV"
+    MOVIE = "movie"
+    TV = "tv"
 
 
 class ProviderType(str, enum.Enum):
-    FLATRATE = "FLATRATE"
-    RENT = "RENT"
-    BUY = "BUY"
-    FREE = "FREE"
+    FLATRATE = "flatrate"
+    RENT = "rent"
+    BUY = "buy"
+    FREE = "free"
 
 
 # ---------------------------------------------------------------------------
@@ -126,7 +126,7 @@ class Title(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_new_uuid)
     tmdb_id: Mapped[int] = mapped_column(Integer, unique=True, nullable=False, index=True)
-    title_type: Mapped[TitleType] = mapped_column(Enum(TitleType, name="title_type_enum"), nullable=False, index=True)
+    title_type: Mapped[TitleType] = mapped_column(Enum(TitleType, name="title_type", create_type=False), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(500), nullable=False)
     original_name: Mapped[str | None] = mapped_column(String(500))
     overview: Mapped[str | None] = mapped_column(Text)
@@ -169,7 +169,7 @@ class RegionalAvailability(Base):
     title_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("titles.id", ondelete="CASCADE"), nullable=False)
     region: Mapped[str] = mapped_column(String(10), nullable=False)
     provider_name: Mapped[str] = mapped_column(String(200), nullable=False)
-    provider_type: Mapped[ProviderType] = mapped_column(Enum(ProviderType, name="provider_type_enum"), nullable=False)
+    provider_type: Mapped[ProviderType] = mapped_column(Enum(ProviderType, name="provider_type", create_type=False), nullable=False)
     provider_logo_path: Mapped[str | None] = mapped_column(String(500))
     link: Mapped[str | None] = mapped_column(String(1000))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)

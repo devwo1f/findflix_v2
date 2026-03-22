@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     DIVERSITY_LAMBDA: float = 0.3
     NOVELTY_WEIGHT: float = 0.1
 
-    model_config = {"env_prefix": "ML_"}
+    model_config = {"env_prefix": ""}
 
 
 settings = Settings()

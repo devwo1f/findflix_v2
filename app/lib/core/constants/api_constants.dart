@@ -3,8 +3,10 @@ class ApiConstants {
   ApiConstants._();
 
   // ── Base URL ─────────────────────────────────────────────────────
-  static const String baseUrl = 'https://api.findflix.com/api/v1';
-  static const String devBaseUrl = 'http://localhost:8000/api/v1';
+  static const bool _isDev = true;
+  static const String _prodBaseUrl = 'https://api.findflix.com/api/v1';
+  static const String _devBaseUrl = 'http://localhost:8000/api/v1';
+  static const String baseUrl = _isDev ? _devBaseUrl : _prodBaseUrl;
 
   // ── Timeouts (milliseconds) ──────────────────────────────────────
   static const int connectTimeout = 15000;

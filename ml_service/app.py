@@ -41,7 +41,11 @@ structlog.configure(
         structlog.processors.format_exc_info,
         structlog.processors.JSONRenderer(),
     ],
-    wrapper_class=structlog.make_filtering_bound_logger(settings.LOG_LEVEL.upper()),
+    wrapper_class=structlog.make_filtering_bound_logger(
+        {"debug": 10, "info": 20, "warning": 30, "error": 40, "critical": 50}.get(
+            settings.LOG_LEVEL.lower(), 20
+        )
+    ),
     context_class=dict,
     logger_factory=structlog.PrintLoggerFactory(),
     cache_logger_on_first_use=True,
