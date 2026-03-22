@@ -1,61 +1,65 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/constants/api_constants.dart';
 import '../core/network/api_client.dart';
 import '../core/network/api_interceptors.dart';
 import '../models/user.dart';
 
-// ── Firebase Auth Instance ────────────────────────────────────────────
+const _accessTokenKey = 'findflix_access_token';
+const _refreshTokenKey = 'findflix_refresh_token';
 
-final firebaseAuthProvider = Provider<FirebaseAuth>((ref) {
-  return FirebaseAuth.instance;
+// ── Auth State ───────────────────────────────────────────────────────
+
+final authStateProvider = StateNotifierProvider<AuthStateNotifier, AsyncValue<AppUser?>>((ref) {
+  return AuthStateNotifier(ref);
 });
 
-// ── Auth State Stream ─────────────────────────────────────────────────
+class AuthStateNotifier extends StateNotifier<AsyncValue<AppUser?>> {
+  final Ref _ref;
 
-final authStateProvider = StreamProvider<User?>((ref) {
-  return ref.watch(firebaseAuthProvider).authStateChanges();
-});
-
-// ── Token Provider ────────────────────────────────────────────────────
-
-final tokenProvider = FutureProvider<String?>((ref) async {
-  final authState = ref.watch(authStateProvider);
-  return authState.whenOrNull(
-    data: (user) => user?.getIdToken(),
-  );
-});
-
-// ── Current App User ──────────────────────────────────────────────────
-
-final currentUserProvider = FutureProvider<AppUser?>((ref) async {
-  final authState = ref.watch(authStateProvider);
-  final user = authState.asData?.value;
-  if (user == null) return null;
-
-  // Sync token for API calls.
-  final token = await user.getIdToken();
-  ref.read(tokenStringProvider.notifier).state = token;
-
-  try {
-    final api = ref.read(apiClientProvider);
-    final data =
-        await api.get<Map<String, dynamic>>(ApiConstants.userProfile);
-    return AppUser.fromJson(data);
-  } catch (_) {
-    // Fallback to Firebase user if backend is unavailable.
-    return AppUser(
-      id: user.uid,
-      email: user.email ?? '',
-      displayName: user.displayName ?? '',
-      photoUrl: user.photoURL,
-      createdAt: user.metadata.creationTime ?? DateTime.now(),
-    );
+  AuthStateNotifier(this._ref) : super(const AsyncValue.data(null)) {
+    _tryRestoreSession();
   }
+
+  Future<void> _tryRestoreSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(_accessTokenKey);
+    if (token == null || token.isEmpty) {
+      state = const AsyncValue.data(null);
+      return;
+    }
+
+    _ref.read(tokenStringProvider.notifier).state = token;
+
+    try {
+      final api = _ref.read(apiClientProvider);
+      final data = await api.get<Map<String, dynamic>>(ApiConstants.profile);
+      state = AsyncValue.data(AppUser.fromJson(data));
+    } catch (_) {
+      await prefs.remove(_accessTokenKey);
+      await prefs.remove(_refreshTokenKey);
+      _ref.read(tokenStringProvider.notifier).state = null;
+      state = const AsyncValue.data(null);
+    }
+  }
+
+  void setUser(AppUser user) {
+    state = AsyncValue.data(user);
+  }
+
+  void clear() {
+    state = const AsyncValue.data(null);
+  }
+}
+
+// ── Current App User (convenience alias) ─────────────────────────────
+
+final currentUserProvider = Provider<AsyncValue<AppUser?>>((ref) {
+  return ref.watch(authStateProvider);
 });
 
-// ── Auth Service ──────────────────────────────────────────────────────
+// ── Auth Service ─────────────────────────────────────────────────────
 
 final authServiceProvider = Provider<AuthService>((ref) {
   return AuthService(ref);
@@ -66,97 +70,72 @@ class AuthService {
 
   AuthService(this._ref);
 
-  FirebaseAuth get _auth => _ref.read(firebaseAuthProvider);
-
-  /// Sign in with email and password.
-  Future<UserCredential> login({
+  Future<void> login({
     required String email,
     required String password,
   }) async {
-    try {
-      final credential = await _auth.signInWithEmailAndPassword(
-        email: email.trim(),
-        password: password,
-      );
+    final api = _ref.read(apiClientProvider);
+    final data = await api.post<Map<String, dynamic>>(
+      ApiConstants.login,
+      data: {'email': email.trim(), 'password': password},
+    );
 
-      // Push token into interceptor.
-      final token = await credential.user?.getIdToken();
-      _ref.read(tokenStringProvider.notifier).state = token;
+    final accessToken = data['access_token'] as String;
+    final refreshToken = data['refresh_token'] as String? ?? '';
 
-      return credential;
-    } on FirebaseAuthException catch (e) {
-      throw _mapAuthException(e);
-    }
+    await _persistTokens(accessToken, refreshToken);
+    _ref.read(tokenStringProvider.notifier).state = accessToken;
+
+    final profileData = await api.get<Map<String, dynamic>>(ApiConstants.profile);
+    final user = AppUser.fromJson(profileData);
+    _ref.read(authStateProvider.notifier).setUser(user);
   }
 
-  /// Create a new account.
-  Future<UserCredential> signup({
+  Future<void> signup({
     required String name,
     required String email,
     required String password,
   }) async {
-    try {
-      final credential = await _auth.createUserWithEmailAndPassword(
-        email: email.trim(),
-        password: password,
-      );
+    final api = _ref.read(apiClientProvider);
+    final data = await api.post<Map<String, dynamic>>(
+      ApiConstants.signup,
+      data: {
+        'email': email.trim(),
+        'password': password,
+        'display_name': name.trim(),
+      },
+    );
 
-      await credential.user?.updateDisplayName(name.trim());
+    final accessToken = data['access_token'] as String;
+    final refreshToken = data['refresh_token'] as String? ?? '';
 
-      // Register in backend.
-      try {
-        final token = await credential.user?.getIdToken();
-        _ref.read(tokenStringProvider.notifier).state = token;
-        final api = _ref.read(apiClientProvider);
-        await api.post(ApiConstants.signup, data: {
-          'uid': credential.user?.uid,
-          'email': email.trim(),
-          'display_name': name.trim(),
-        });
-      } catch (_) {
-        // Non-critical: backend sync can happen later.
-      }
+    await _persistTokens(accessToken, refreshToken);
+    _ref.read(tokenStringProvider.notifier).state = accessToken;
 
-      return credential;
-    } on FirebaseAuthException catch (e) {
-      throw _mapAuthException(e);
-    }
+    final profileData = await api.get<Map<String, dynamic>>(ApiConstants.profile);
+    final user = AppUser.fromJson(profileData);
+    _ref.read(authStateProvider.notifier).setUser(user);
   }
 
-  /// Send password reset email.
   Future<void> resetPassword(String email) async {
-    try {
-      await _auth.sendPasswordResetEmail(email: email.trim());
-    } on FirebaseAuthException catch (e) {
-      throw _mapAuthException(e);
-    }
+    final api = _ref.read(apiClientProvider);
+    await api.post(
+      ApiConstants.resetPassword,
+      data: {'email': email.trim()},
+    );
   }
 
-  /// Sign out.
   Future<void> logout() async {
     _ref.read(tokenStringProvider.notifier).state = null;
-    await _auth.signOut();
+    _ref.read(authStateProvider.notifier).clear();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_accessTokenKey);
+    await prefs.remove(_refreshTokenKey);
   }
 
-  /// Convert Firebase errors to user-friendly messages.
-  String _mapAuthException(FirebaseAuthException e) {
-    switch (e.code) {
-      case 'user-not-found':
-        return 'No account found with this email.';
-      case 'wrong-password':
-        return 'Incorrect password. Please try again.';
-      case 'email-already-in-use':
-        return 'An account already exists with this email.';
-      case 'weak-password':
-        return 'Password is too weak. Use at least 6 characters.';
-      case 'invalid-email':
-        return 'Please enter a valid email address.';
-      case 'too-many-requests':
-        return 'Too many attempts. Please try again later.';
-      case 'network-request-failed':
-        return 'Network error. Please check your connection.';
-      default:
-        return e.message ?? 'Authentication failed. Please try again.';
-    }
+  Future<void> _persistTokens(String access, String refresh) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_accessTokenKey, access);
+    await prefs.setString(_refreshTokenKey, refresh);
   }
 }

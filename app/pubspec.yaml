@@ -17,10 +17,6 @@ dependencies:
   # Routing
   go_router: ^13.0.1
 
-  # Firebase
-  firebase_core: ^2.24.2
-  firebase_auth: ^4.16.0
-
   # Networking
   dio: ^5.4.0
 
@@ -56,22 +52,3 @@ flutter:
     - assets/images/
     - assets/icons/
 
-  fonts:
-    - family: Inter
-      fonts:
-        - asset: assets/fonts/Inter-Regular.ttf
-        - asset: assets/fonts/Inter-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/Inter-SemiBold.ttf
-          weight: 600
-        - asset: assets/fonts/Inter-Bold.ttf
-          weight: 700
-    - family: Poppins
-      fonts:
-        - asset: assets/fonts/Poppins-Regular.ttf
-        - asset: assets/fonts/Poppins-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/Poppins-SemiBold.ttf
-          weight: 600
-        - asset: assets/fonts/Poppins-Bold.ttf
-          weight: 700
