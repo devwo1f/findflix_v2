@@ -32,36 +32,84 @@ def load_interaction_sequences(
 ) -> List[Dict[str, Any]]:
     """Load user interaction sequences from the database.
 
-    Each record represents a user's chronologically ordered watch history
-    and the next title they engaged with (positive) along with negatives.
-
-    Falls back to synthetic data when the database is unavailable.
+    Falls back to synthetic data when the database is unavailable or has
+    insufficient data.
     """
     try:
+        import json as _json
+
         import pandas as pd
         import sqlalchemy
 
+        from ml_service.features.item_features import extract_item_features
+
         engine = sqlalchemy.create_engine(database_url)
         query = """
-            SELECT u.id AS user_id,
-                   array_agg(wh.title_id ORDER BY wh.watched_at) AS sequence,
-                   array_agg(t.metadata ORDER BY wh.watched_at) AS meta_seq
-            FROM users u
-            JOIN watch_history wh ON wh.user_id = u.id
+            SELECT wh.user_id,
+                   t.genres, t.overview, t.runtime,
+                   t.popularity, t.vote_average,
+                   t.release_date, t.original_language
+            FROM watch_history wh
             JOIN titles t ON t.id = wh.title_id
-            GROUP BY u.id
-            HAVING count(*) >= 5
+            ORDER BY wh.user_id, wh.watched_at
         """
         df = pd.read_sql(query, engine)
-        sequences = []
+
+        if len(df) < 20:
+            logger.warning("insufficient_sequence_data", rows=len(df))
+            return _generate_synthetic_sequences()
+
+        user_sequences: Dict[str, List[np.ndarray]] = {}
         for _, row in df.iterrows():
+            uid = str(row["user_id"])
+            genres_raw = row["genres"]
+            if isinstance(genres_raw, str):
+                genres_raw = _json.loads(genres_raw)
+            genre_ids = []
+            if isinstance(genres_raw, list):
+                for g in genres_raw:
+                    if isinstance(g, dict) and g.get("id"):
+                        genre_ids.append(int(g["id"]))
+
+            meta = {
+                "genre_ids": genre_ids,
+                "overview": str(row.get("overview", "")),
+                "runtime": row.get("runtime"),
+                "popularity": row.get("popularity", 0),
+                "vote_average": row.get("vote_average", 0),
+                "vote_count": 0,
+                "release_date": str(row.get("release_date", "")),
+                "original_language": str(row.get("original_language", "en")),
+                "providers": [],
+            }
+            feats = extract_item_features(meta)
+            feat_vec = np.concatenate([v.flatten() for v in feats.values()])
+            if uid not in user_sequences:
+                user_sequences[uid] = []
+            user_sequences[uid].append(feat_vec)
+
+        sequences = []
+        feat_dim = settings.EMBEDDING_DIM
+        rng = np.random.RandomState(42)
+        for uid, feat_list in user_sequences.items():
+            if len(feat_list) < 3:
+                continue
+            arr = np.array(feat_list, dtype=np.float32)
+            if arr.shape[1] != feat_dim:
+                proj = rng.randn(arr.shape[1], feat_dim).astype(np.float32) * 0.1
+                arr = arr @ proj
             sequences.append({
-                "user_id": row["user_id"],
-                "sequence": row["sequence"],
-                "meta_seq": row["meta_seq"],
+                "user_id": uid,
+                "sequence_features": arr[:-1],
+                "positive_features": arr[-1],
+                "negative_features": rng.randn(5, feat_dim).astype(np.float32),
             })
+
         logger.info("loaded_sequences", count=len(sequences))
+        if len(sequences) < 10:
+            return _generate_synthetic_sequences()
         return sequences
+
     except Exception as exc:
         logger.warning("db_load_failed_using_synthetic", error=str(exc))
         return _generate_synthetic_sequences()
@@ -165,6 +213,10 @@ def prepare_sequences(
 # Training
 # ---------------------------------------------------------------------------
 
+import keras
+
+
+@keras.saving.register_keras_serializable(package="findflix")
 class WarmupCosineSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
     """Linear warmup followed by cosine decay."""
 
@@ -284,8 +336,9 @@ def _ndcg(labels: np.ndarray, scores: np.ndarray, k: int = 10) -> float:
 
 def save_model(model: tf.keras.Model, output_dir: str) -> None:
     os.makedirs(output_dir, exist_ok=True)
-    model.save(output_dir)
-    logger.info("reranker_model_saved", path=output_dir)
+    path = os.path.join(output_dir, "model.keras")
+    model.save(path)
+    logger.info("reranker_model_saved", path=path)
 
 
 # ---------------------------------------------------------------------------

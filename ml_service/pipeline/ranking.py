@@ -14,7 +14,8 @@ import structlog
 import tensorflow as tf
 
 from ml_service.core.config import settings
-from ml_service.models.reranker import TransformerReranker
+from ml_service.models.reranker import TransformerReranker  # noqa: F401 (needed for keras deserialization)
+from ml_service.training.train_reranker import WarmupCosineSchedule  # noqa: F401
 
 logger = structlog.get_logger(__name__)
 
@@ -34,7 +35,11 @@ class RankingPipeline:
 
     def _load_model(self, path: str) -> None:
         try:
-            if os.path.isdir(path):
+            keras_path = os.path.join(path, "model.keras")
+            if os.path.isfile(keras_path):
+                self._reranker = tf.keras.models.load_model(keras_path)
+                logger.info("reranker_model_loaded", path=keras_path)
+            elif os.path.isdir(path) and os.path.exists(os.path.join(path, "saved_model.pb")):
                 self._reranker = tf.keras.models.load_model(path)
                 logger.info("reranker_model_loaded", path=path)
             else:

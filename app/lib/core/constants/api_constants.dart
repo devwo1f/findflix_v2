@@ -33,6 +33,9 @@ class ApiConstants {
   static String recommendationFeedback(String recId) =>
       '/recommendations/$recId/feedback';
 
+  // ── Vibe Check ─────────────────────────────────────────────────
+  static const String vibeCheck = '/recommendations/vibe-check';
+
   // ── Titles ───────────────────────────────────────────────────────
   static const String titles = '/titles';
   static String titleDetail(String id) => '/titles/$id';

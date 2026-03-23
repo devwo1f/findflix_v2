@@ -15,9 +15,6 @@ from app.db.models import (
 
 logger = structlog.get_logger(__name__)
 
-_PACING_MAP = {"slow": 0.2, "moderate": 0.5, "fast": 0.8}
-_TONE_MAP = {"light": 0.2, "balanced": 0.5, "dark": 0.8}
-_INTENSITY_MAP = {"low": 0.2, "medium": 0.5, "high": 0.8}
 _RUNTIME_MAP = {"<90": 0.2, "short": 0.2, "90-120": 0.4, "medium": 0.5, "120-150": 0.6, "long": 0.7, "150+": 0.8, "any": 0.5}
 _REWATCH_MAP = {"never": 0.0, "no": 0.0, "sometimes": 0.5, "often": 1.0, "yes": 1.0}
 
@@ -52,9 +49,9 @@ def _to_ml_questionnaire(q: QuestionnaireResponse | None) -> dict:
     return {
         "preferred_genre_ids": genre_ids,
         "mood_preferences": mood_list,
-        "pacing": _PACING_MAP.get(q.pacing_preference or "", 0.5),
-        "tone": _TONE_MAP.get(q.tone_preference or "", 0.5),
-        "intensity": _INTENSITY_MAP.get(q.intensity_preference or "", 0.5),
+        "pacing": float(q.pacing_preference) if q.pacing_preference is not None else 0.5,
+        "tone": float(q.tone_preference) if q.tone_preference is not None else 0.5,
+        "intensity": float(q.intensity_preference) if q.intensity_preference is not None else 0.5,
         "runtime_preference": _RUNTIME_MAP.get(q.runtime_preference or "", 0.5),
         "rewatch_tolerance": _REWATCH_MAP.get(q.rewatch_tolerance or "", 0.5),
     }

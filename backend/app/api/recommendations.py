@@ -13,6 +13,8 @@ from app.schemas.recommendations import (
     RecommendationListResponse,
     RecommendationRequest,
     TrendingResponse,
+    VibeCheckRequest,
+    VibeCheckResponse,
 )
 from app.schemas.titles import TitleResponse
 from app.services.recommendation import RecommendationService
@@ -76,6 +78,31 @@ async def submit_feedback(
     await db.flush()
 
     return {"message": "Feedback recorded", "rec_id": str(rec_id), "feedback": body.feedback}
+
+
+@router.post("/vibe-check", response_model=VibeCheckResponse)
+async def vibe_check(
+    body: VibeCheckRequest,
+    db: DbSession,
+    current_user: CurrentUser,
+):
+    logger.info(
+        "vibe_check",
+        user_id=str(current_user.id),
+        mood=body.mood,
+        vibe=body.vibe,
+        time=body.time_available,
+        type=body.content_type,
+    )
+    service = RecommendationService(db)
+    picks, summary = await service.vibe_check(
+        user_id=current_user.id,
+        mood=body.mood,
+        time_available=body.time_available,
+        content_type=body.content_type,
+        vibe=body.vibe,
+    )
+    return VibeCheckResponse(picks=picks, vibe_summary=summary)
 
 
 @router.get("/trending", response_model=TrendingResponse)

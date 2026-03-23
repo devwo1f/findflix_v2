@@ -1,11 +1,15 @@
+import httpx
 import structlog
 from fastapi import APIRouter, Query
 from sqlalchemy import func, select
 
+from app.core.config import settings
 from app.core.dependencies import AdminUser, DbSession
 from app.db.models import (
     FeedbackEvent,
+    QuestionnaireResponse,
     RecommendationLog,
+    TasteEmbedding,
     Title,
     User,
     WatchHistory,
@@ -94,17 +98,40 @@ async def recommendation_logs(
 
 
 @router.get("/model/info")
-async def model_info(admin_user: AdminUser):
+async def model_info(admin_user: AdminUser, db: DbSession):
     logger.info("admin_model_info", admin_id=str(admin_user.id))
 
+    questionnaire_count = (
+        await db.execute(select(func.count()).select_from(QuestionnaireResponse))
+    ).scalar() or 0
+    embedding_count = (
+        await db.execute(select(func.count()).select_from(TasteEmbedding))
+    ).scalar() or 0
+    watch_count = (
+        await db.execute(select(func.count()).select_from(WatchHistory))
+    ).scalar() or 0
+
+    ml_status = {"retrieval_ready": False, "ranking_ready": False}
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(f"{settings.ML_SERVICE_URL}/model/info")
+            if resp.status_code == 200:
+                ml_status = resp.json()
+    except Exception:
+        pass
+
     return {
-        "model_version": "v1",
-        "embedding_dimensions": 128,
-        "retrieval_algorithm": "approximate_nearest_neighbors",
-        "reranker": "cross_encoder_v1",
-        "last_trained": None,
-        "training_samples": 0,
-        "status": "active",
+        "ml_service": ml_status,
+        "questionnaire_responses": questionnaire_count,
+        "taste_embeddings": embedding_count,
+        "watch_history_entries": watch_count,
+        "can_train": watch_count >= 10 or questionnaire_count >= 1,
+        "training_hint": (
+            "Run: docker compose exec ml_service python -m ml_service.training.train_all"
+            if watch_count >= 10
+            else "Need more user interactions before training is effective. "
+                 "Content-based recommendations are active in the meantime."
+        ),
     }
 
 

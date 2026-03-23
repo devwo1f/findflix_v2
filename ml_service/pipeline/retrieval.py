@@ -16,6 +16,7 @@ import structlog
 import tensorflow as tf
 
 from ml_service.core.config import settings
+from ml_service.models.two_tower import UserTower, ItemTower  # noqa: F401  (needed for keras deserialization)
 
 logger = structlog.get_logger(__name__)
 
@@ -43,13 +44,19 @@ class RetrievalPipeline:
     # ------------------------------------------------------------------
 
     def _load_model(self, base_path: str) -> None:
-        user_path = os.path.join(base_path, "user_tower")
-        item_path = os.path.join(base_path, "item_tower")
+        user_keras = os.path.join(base_path, "user_tower.keras")
+        item_keras = os.path.join(base_path, "item_tower.keras")
+        user_dir = os.path.join(base_path, "user_tower")
+        item_dir = os.path.join(base_path, "item_tower")
         try:
-            if os.path.isdir(user_path) and os.path.isdir(item_path):
-                self._user_tower = tf.keras.models.load_model(user_path)
-                self._item_tower = tf.keras.models.load_model(item_path)
-                logger.info("retrieval_model_loaded", path=base_path)
+            if os.path.isfile(user_keras) and os.path.isfile(item_keras):
+                self._user_tower = tf.keras.models.load_model(user_keras)
+                self._item_tower = tf.keras.models.load_model(item_keras)
+                logger.info("retrieval_model_loaded", path=base_path, fmt="keras")
+            elif os.path.isdir(user_dir) and os.path.isdir(item_dir):
+                self._user_tower = tf.keras.models.load_model(user_dir)
+                self._item_tower = tf.keras.models.load_model(item_dir)
+                logger.info("retrieval_model_loaded", path=base_path, fmt="savedmodel")
             else:
                 logger.warning("retrieval_model_not_found", path=base_path)
         except Exception:
