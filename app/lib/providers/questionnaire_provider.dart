@@ -145,10 +145,18 @@ class QuestionnaireNotifier extends StateNotifier<QuestionnaireState> {
     state = state.copyWith(isSubmitting: true, error: null);
     try {
       final api = _ref.read(apiClientProvider);
-      await api.post(
-        ApiConstants.submitQuestionnaire,
-        data: state.data.toJson(),
-      );
+      try {
+        await api.post(
+          ApiConstants.submitQuestionnaire,
+          data: state.data.toJson(),
+        );
+      } catch (e) {
+        // If POST returns 409 (already exists), try PUT instead
+        await api.put(
+          ApiConstants.submitQuestionnaire,
+          data: state.data.toJson(),
+        );
+      }
       state = state.copyWith(
         isSubmitting: false,
         currentStep: QuestionnaireStep.complete,
