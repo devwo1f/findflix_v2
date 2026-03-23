@@ -42,6 +42,7 @@ class TitleDetail(TitleResponse):
     created_at: datetime | None = None
     updated_at: datetime | None = None
     availability: list[AvailabilityInfo] = []
+    trailer_key: str | None = None
 
 
 class TitleSearch(BaseModel):

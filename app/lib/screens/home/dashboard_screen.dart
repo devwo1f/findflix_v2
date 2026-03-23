@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/recommendation_provider.dart';
@@ -45,7 +46,7 @@ class DashboardScreen extends ConsumerWidget {
                 children: [
                   ShaderMask(
                     shaderCallback: (bounds) =>
-                        AppColors.primaryGradient.createShader(bounds),
+                        AppColors.brandGradient.createShader(bounds),
                     child: const Text(
                       'FindFlix',
                       style: TextStyle(
@@ -74,6 +75,17 @@ class DashboardScreen extends ConsumerWidget {
                   'Hey $firstName',
                   style: theme.textTheme.headlineLarge,
                 ).animate().fadeIn(duration: 400.ms),
+              ),
+            ),
+
+            // ── Vibe Check CTA ───────────────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: _VibeCheckCard(
+                  onTap: () => context.push(AppRoutes.vibeCheck),
+                ),
               ),
             ),
 
@@ -216,6 +228,74 @@ class _ErrorRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _VibeCheckCard extends StatelessWidget {
+  final VoidCallback onTap;
+  const _VibeCheckCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          gradient: AppColors.brandGradient,
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.gradientPurple.withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.2),
+              ),
+              child: const Center(
+                child: Text('🎯', style: TextStyle(fontSize: 24)),
+              ),
+            ),
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Vibe Check',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    "Can't decide? Let us pick for you!",
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.white70,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_rounded,
+                color: Colors.white, size: 22),
+          ],
+        ),
+      ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.1, duration: 500.ms),
     );
   }
 }

@@ -112,6 +112,29 @@ class TMDbClient(ContentProviderBase):
         region_data = results.get(region, {})
         return region_data
 
+    async def get_videos(self, external_id: int, title_type: str) -> list[dict[str, Any]]:
+        media = "movie" if title_type.upper() == "MOVIE" else "tv"
+        data = await self._request("GET", f"/{media}/{external_id}/videos")
+        return data.get("results", [])
+
+    async def get_trailer_key(self, external_id: int, title_type: str) -> str | None:
+        """Return the best YouTube trailer key, or None."""
+        try:
+            videos = await self.get_videos(external_id, title_type)
+        except Exception:
+            return None
+        yt = [v for v in videos if v.get("site") == "YouTube"]
+        for v in yt:
+            if v.get("type") == "Trailer" and v.get("official"):
+                return v["key"]
+        for v in yt:
+            if v.get("type") == "Trailer":
+                return v["key"]
+        for v in yt:
+            if v.get("type") == "Teaser":
+                return v["key"]
+        return yt[0]["key"] if yt else None
+
     async def get_similar(self, external_id: int, title_type: str, page: int = 1) -> dict[str, Any]:
         media = "movie" if title_type.upper() == "MOVIE" else "tv"
         return await self._request("GET", f"/{media}/{external_id}/similar", params={"page": page})

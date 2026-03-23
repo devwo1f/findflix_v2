@@ -56,11 +56,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                gradient: AppColors.primaryGradient,
+                gradient: AppColors.brandGradient,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(0.4),
+                    color: AppColors.gradientPurple.withOpacity(0.4),
                     blurRadius: 30,
                     offset: const Offset(0, 8),
                   ),
@@ -86,7 +86,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             // Brand name
             ShaderMask(
               shaderCallback: (bounds) =>
-                  AppColors.primaryGradient.createShader(bounds),
+                  AppColors.brandGradient.createShader(bounds),
               child: const Text(
                 'FindFlix',
                 style: TextStyle(

@@ -255,20 +255,20 @@ class _OptionTile extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-        splashColor: data.color.withValues(alpha: 0.2),
+        splashColor: data.color.withOpacity( 0.2),
         child: Ink(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             gradient: LinearGradient(
               colors: [
-                data.color.withValues(alpha: 0.15),
-                data.color.withValues(alpha: 0.06),
+                data.color.withOpacity( 0.15),
+                data.color.withOpacity( 0.06),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             border: Border.all(
-              color: data.color.withValues(alpha: 0.25),
+              color: data.color.withOpacity( 0.25),
               width: 1.2,
             ),
           ),
@@ -321,7 +321,7 @@ class _Header extends StatelessWidget {
             const SizedBox(width: 48),
           const Spacer(),
           ShaderMask(
-            shaderCallback: (b) => AppColors.accentGradient.createShader(b),
+            shaderCallback: (b) => AppColors.brandGradient.createShader(b),
             child: const Text(
               'Vibe Check',
               style: TextStyle(
@@ -364,7 +364,7 @@ class _StepIndicator extends StatelessWidget {
                 borderRadius: BorderRadius.circular(2),
                 color: active
                     ? AppColors.accent
-                    : AppColors.textTertiary.withValues(alpha: 0.25),
+                    : AppColors.textTertiary.withOpacity( 0.25),
               ),
             ),
           );
@@ -465,7 +465,7 @@ class _PickCard extends StatelessWidget {
           gradient: LinearGradient(
             colors: [
               AppColors.card,
-              AppColors.cardLight.withValues(alpha: 0.7),
+              AppColors.cardLight.withOpacity( 0.7),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -509,7 +509,7 @@ class _PickCard extends StatelessWidget {
                           height: 26,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            gradient: AppColors.accentGradient,
+                            gradient: AppColors.brandGradient,
                           ),
                           child: Center(
                             child: Text(
@@ -602,7 +602,7 @@ class _PickCard extends StatelessWidget {
                                 horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
-                              color: AppColors.primary.withValues(alpha: 0.12),
+                              color: AppColors.primary.withOpacity( 0.12),
                             ),
                             child: Text(
                               g,
@@ -659,7 +659,7 @@ class _LoadingState extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ).animate(onPlay: (c) => c.repeat()).shimmer(
-              duration: 1500.ms, color: AppColors.primary.withValues(alpha: 0.3)),
+              duration: 1500.ms, color: AppColors.primary.withOpacity( 0.3)),
         ],
       ),
     );

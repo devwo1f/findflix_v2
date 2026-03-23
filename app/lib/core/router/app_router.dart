@@ -15,6 +15,7 @@ import '../../screens/search/search_screen.dart';
 import '../../screens/settings/settings_screen.dart';
 import '../../screens/splash/splash_screen.dart';
 import '../../screens/titles/title_detail_screen.dart';
+import '../../screens/vibe_check/vibe_check_screen.dart';
 import '../../screens/watchlist/watchlist_screen.dart';
 
 // ── Route Names ───────────────────────────────────────────────────────
@@ -34,6 +35,7 @@ class AppRoutes {
   static const String titleDetail = '/title/:id';
   static const String settings = '/settings';
   static const String admin = '/admin';
+  static const String vibeCheck = '/vibe-check';
 }
 
 // ── GoRouter Provider ─────────────────────────────────────────────────
@@ -133,6 +135,27 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.admin,
         builder: (context, state) => const AdminScreen(),
+      ),
+
+      // Vibe Check
+      GoRoute(
+        path: AppRoutes.vibeCheck,
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const VibeCheckScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 1),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+              )),
+              child: child,
+            );
+          },
+        ),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

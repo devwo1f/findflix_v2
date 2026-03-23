@@ -5,14 +5,19 @@ class AppColors {
   AppColors._();
 
   // ── Primary Palette ──────────────────────────────────────────────
-  static const Color primary = Color(0xFF6C63FF);
-  static const Color primaryLight = Color(0xFF9D97FF);
-  static const Color primaryDark = Color(0xFF4A42DB);
+  static const Color primary = Color(0xFF7C3AED);
+  static const Color primaryLight = Color(0xFFA78BFA);
+  static const Color primaryDark = Color(0xFF5B21B6);
 
   // ── Accent / Secondary ───────────────────────────────────────────
-  static const Color accent = Color(0xFFFF6B6B);
-  static const Color accentLight = Color(0xFFFF9E9E);
-  static const Color accentDark = Color(0xFFD94848);
+  static const Color accent = Color(0xFFE11D48);
+  static const Color accentLight = Color(0xFFFB7185);
+  static const Color accentDark = Color(0xFFBE123C);
+
+  // ── Brand Gradient Stops ──────────────────────────────────────────
+  static const Color gradientPurple = Color(0xFF7C3AED);
+  static const Color gradientBlue = Color(0xFF2563EB);
+  static const Color gradientRed = Color(0xFFE11D48);
 
   // ── Backgrounds ──────────────────────────────────────────────────
   static const Color background = Color(0xFF0D0D0F);
@@ -53,14 +58,20 @@ class AppColors {
   static const Color peacock = Color(0xFFFBBB00);
 
   // ── Gradients ────────────────────────────────────────────────────
+  static const LinearGradient brandGradient = LinearGradient(
+    colors: [gradientPurple, gradientBlue, gradientRed],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
   static const LinearGradient primaryGradient = LinearGradient(
-    colors: [primary, Color(0xFF8B5CF6)],
+    colors: [gradientPurple, Color(0xFF8B5CF6), gradientBlue],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient accentGradient = LinearGradient(
-    colors: [accent, Color(0xFFFF8E53)],
+    colors: [gradientRed, Color(0xFFDB2777), gradientPurple],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );

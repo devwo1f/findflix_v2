@@ -159,8 +159,11 @@ async def get_title(title_id: UUID, db: DbSession):
         for ra in title.regional_availability
     ]
 
+    trailer_key = await tmdb_client.get_trailer_key(title.tmdb_id, title.title_type.value)
+
     detail = TitleDetail.model_validate(title)
     detail.availability = availability
+    detail.trailer_key = trailer_key
     return detail
 
 
@@ -177,16 +180,68 @@ async def get_availability(
         )
     )
     rows = result.scalars().all()
-    return [
-        AvailabilityInfo(
-            region=ra.region,
-            provider_name=ra.provider_name,
-            provider_type=ra.provider_type.value,
-            provider_logo_path=ra.provider_logo_path,
-            link=ra.link,
+    if rows:
+        return [
+            AvailabilityInfo(
+                region=ra.region,
+                provider_name=ra.provider_name,
+                provider_type=ra.provider_type.value,
+                provider_logo_path=ra.provider_logo_path,
+                link=ra.link,
+            )
+            for ra in rows
+        ]
+
+    title_result = await db.execute(select(Title).where(Title.id == title_id))
+    title = title_result.scalar_one_or_none()
+    if title is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Title not found")
+
+    try:
+        region_data = await tmdb_client.get_watch_providers(
+            title.tmdb_id, title.title_type.value, region=region,
         )
-        for ra in rows
-    ]
+    except Exception as exc:
+        logger.warning("tmdb_providers_failed", error=str(exc), tmdb_id=title.tmdb_id)
+        return []
+
+    link = region_data.get("link")
+    providers: list[AvailabilityInfo] = []
+    from app.db.models import ProviderType
+    valid_types = {e.value: e for e in ProviderType}
+
+    for ptype in ("flatrate", "rent", "buy", "free"):
+        for p in region_data.get(ptype, []):
+            providers.append(AvailabilityInfo(
+                region=region,
+                provider_name=p.get("provider_name", ""),
+                provider_type=ptype,
+                provider_logo_path=p.get("logo_path"),
+                link=link,
+            ))
+
+    for prov in providers:
+        pt = valid_types.get(prov.provider_type)
+        if pt is None:
+            continue
+        try:
+            ra = RegionalAvailability(
+                title_id=title_id,
+                region=region,
+                provider_name=prov.provider_name,
+                provider_type=pt,
+                provider_logo_path=prov.provider_logo_path,
+                link=prov.link,
+            )
+            db.add(ra)
+        except Exception:
+            pass
+    try:
+        await db.flush()
+    except Exception:
+        await db.rollback()
+
+    return providers
 
 
 @router.get("/{title_id}/similar", response_model=list[TitleResponse])

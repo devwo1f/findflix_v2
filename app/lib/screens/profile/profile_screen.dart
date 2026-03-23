@@ -123,12 +123,8 @@ class ProfileScreen extends ConsumerWidget {
             // ── Taste Profile Summary ────────────────────────────
             tasteProfile.when(
               data: (data) {
-                final topGenres =
-                    (data['top_genres'] as List<dynamic>?)?.cast<String>() ??
-                        [];
-                final topMoods =
-                    (data['top_moods'] as List<dynamic>?)?.cast<String>() ??
-                        [];
+                final topGenres = _toStringList(data['top_genres']);
+                final topMoods = _toStringList(data['top_moods']);
 
                 if (topGenres.isEmpty && topMoods.isEmpty) {
                   return const SizedBox.shrink();
@@ -318,6 +314,12 @@ class _SectionCard extends StatelessWidget {
       ),
     );
   }
+}
+
+List<String> _toStringList(dynamic value) {
+  if (value is List) return value.map((e) => e.toString()).toList();
+  if (value is Map) return value.keys.map((k) => k.toString()).toList();
+  return <String>[];
 }
 
 class _LinkTile extends StatelessWidget {

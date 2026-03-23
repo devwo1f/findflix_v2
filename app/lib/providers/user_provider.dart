@@ -150,14 +150,38 @@ class MarkWatchedService {
 
 // ── Taste Profile ─────────────────────────────────────────────────────
 
+const _tmdbGenreNames = <String, String>{
+  '28': 'Action', '12': 'Adventure', '16': 'Animation', '35': 'Comedy',
+  '80': 'Crime', '99': 'Documentary', '18': 'Drama', '10751': 'Family',
+  '14': 'Fantasy', '36': 'History', '27': 'Horror', '10402': 'Music',
+  '9648': 'Mystery', '10749': 'Romance', '878': 'Sci-Fi', '53': 'Thriller',
+  '10752': 'War', '37': 'Western', '10770': 'TV Movie',
+};
+
+List<String> _extractList(dynamic raw, {bool mapGenreIds = false}) {
+  if (raw is List) {
+    return raw.map((e) {
+      final s = e.toString();
+      return mapGenreIds ? (_tmdbGenreNames[s] ?? s) : s;
+    }).toList();
+  }
+  if (raw is Map) {
+    return raw.keys.map((k) {
+      final s = k.toString();
+      return mapGenreIds ? (_tmdbGenreNames[s] ?? s) : s;
+    }).toList();
+  }
+  return <String>[];
+}
+
 final tasteProfileProvider =
     FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
   final api = ref.read(apiClientProvider);
   try {
     final data = await api.get<Map<String, dynamic>>(ApiConstants.tasteProfile);
     return {
-      'top_genres': data['genre_preferences'] ?? [],
-      'top_moods': data['mood_preferences'] ?? [],
+      'top_genres': _extractList(data['genre_preferences'], mapGenreIds: true),
+      'top_moods': _extractList(data['mood_preferences']),
     };
   } catch (_) {
     return {'top_genres': <String>[], 'top_moods': <String>[]};
