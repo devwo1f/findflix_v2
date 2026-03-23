@@ -111,5 +111,16 @@ async def model_info(admin_user: AdminUser):
 @router.post("/sync/tmdb", status_code=202)
 async def trigger_tmdb_sync(admin_user: AdminUser):
     logger.info("admin_tmdb_sync", admin_id=str(admin_user.id))
-    # In production, dispatch Celery task: sync_trending_titles.delay()
-    return {"message": "TMDb sync task has been queued", "status": "accepted"}
+    from app.tasks.sync_tasks import sync_trending_titles, sync_popular_titles
+
+    trending_task = sync_trending_titles.delay(pages=10)
+    popular_task = sync_popular_titles.delay(pages=5)
+
+    return {
+        "message": "TMDb sync tasks dispatched",
+        "status": "accepted",
+        "tasks": {
+            "trending": trending_task.id,
+            "popular": popular_task.id,
+        },
+    }

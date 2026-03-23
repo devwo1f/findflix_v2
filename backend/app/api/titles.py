@@ -1,4 +1,5 @@
 import math
+from datetime import date
 from uuid import UUID
 
 import structlog
@@ -14,39 +15,33 @@ from app.schemas.titles import (
     TitleListResponse,
     TitleResponse,
 )
-from app.services.tmdb import tmdb_client
+from app.services.tmdb import tmdb_client, upsert_tmdb_items
 
 logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/titles", tags=["titles"])
 
 
-def _build_search_query(
-    q: str | None,
+def _build_filter_query(
+    base: Select,
     genre: str | None,
     title_type: str | None,
     year_from: int | None,
     year_to: int | None,
 ) -> Select:
-    query = select(Title)
-
-    if q:
-        query = query.where(Title.name.ilike(f"%{q}%"))
     if genre:
-        # genres is a JSONB array of objects with 'name' key
-        query = query.where(Title.genres.op("@>")([{"name": genre}]))
+        base = base.where(Title.genres.op("@>")([{"name": genre}]))
     if title_type:
         try:
             tt = TitleType(title_type.upper())
-            query = query.where(Title.title_type == tt)
+            base = base.where(Title.title_type == tt)
         except ValueError:
             pass
     if year_from:
-        query = query.where(Title.release_date >= str(year_from))
+        base = base.where(Title.release_date >= date(year_from, 1, 1))
     if year_to:
-        query = query.where(Title.release_date <= f"{year_to}-12-31")
-
-    return query
+        base = base.where(Title.release_date <= date(year_to, 12, 31))
+    return base
 
 
 @router.get("/search", response_model=TitleListResponse)
@@ -62,17 +57,36 @@ async def search_titles(
 ):
     logger.info("title_search", q=q, genre=genre, type=type, page=page)
 
-    base_query = _build_search_query(q, genre, type, year_from, year_to)
+    if q and q.strip():
+        try:
+            tmdb_data = await tmdb_client.search_titles(query=q, page=page)
+            raw_results = tmdb_data.get("results", [])
+            tmdb_total = tmdb_data.get("total_results", 0)
+            tmdb_pages = tmdb_data.get("total_pages", 1)
+            upserted = await upsert_tmdb_items(db, raw_results)
+            await db.commit()
 
-    # Count
+            items = [TitleResponse.model_validate(t) for t in upserted]
+            return TitleListResponse(
+                items=items,
+                total=tmdb_total,
+                page=page,
+                per_page=per_page,
+                pages=tmdb_pages,
+            )
+        except Exception as exc:
+            logger.warning("tmdb_search_fallback", error=str(exc))
+
+    base_query = select(Title)
+    if q:
+        base_query = base_query.where(Title.name.ilike(f"%{q}%"))
+    base_query = _build_filter_query(base_query, genre, type, year_from, year_to)
+
     count_query = select(func.count()).select_from(base_query.subquery())
-    total_result = await db.execute(count_query)
-    total = total_result.scalar() or 0
+    total = (await db.execute(count_query)).scalar() or 0
 
-    # Paginate
     query = base_query.order_by(Title.popularity.desc()).offset((page - 1) * per_page).limit(per_page)
-    result = await db.execute(query)
-    titles = result.scalars().all()
+    titles = (await db.execute(query)).scalars().all()
 
     return TitleListResponse(
         items=[TitleResponse.model_validate(t) for t in titles],
@@ -81,6 +95,48 @@ async def search_titles(
         per_page=per_page,
         pages=math.ceil(total / per_page) if per_page else 0,
     )
+
+
+@router.get("/tmdb/{tmdb_id}", response_model=TitleDetail)
+async def get_title_by_tmdb_id(tmdb_id: int, db: DbSession):
+    """Fetch a title by its TMDb ID. Creates it locally if not already in the DB."""
+    result = await db.execute(
+        select(Title).options(selectinload(Title.regional_availability))
+        .where(Title.tmdb_id == tmdb_id)
+    )
+    title = result.scalar_one_or_none()
+
+    if title is None:
+        for media in ("movie", "tv"):
+            try:
+                detail_data = await tmdb_client.get_title_detail(tmdb_id, media)
+                if detail_data.get("id"):
+                    detail_data["media_type"] = media
+                    upserted = await upsert_tmdb_items(db, [detail_data])
+                    await db.commit()
+                    if upserted:
+                        title = upserted[0]
+                    break
+            except Exception:
+                continue
+
+    if title is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Title not found on TMDb")
+
+    availability = [
+        AvailabilityInfo(
+            region=ra.region,
+            provider_name=ra.provider_name,
+            provider_type=ra.provider_type.value,
+            provider_logo_path=ra.provider_logo_path,
+            link=ra.link,
+        )
+        for ra in (title.regional_availability or [])
+    ]
+
+    detail = TitleDetail.model_validate(title)
+    detail.availability = availability
+    return detail
 
 
 @router.get("/{title_id}", response_model=TitleDetail)
@@ -142,21 +198,17 @@ async def get_similar(title_id: UUID, db: DbSession):
 
     try:
         tmdb_data = await tmdb_client.get_similar(title.tmdb_id, title.title_type.value)
-        tmdb_ids = [r["id"] for r in tmdb_data.get("results", [])[:10]]
+        raw_results = tmdb_data.get("results", [])[:20]
+        media = "movie" if title.title_type == TitleType.MOVIE else "tv"
+        similar = await upsert_tmdb_items(db, raw_results, default_media_type=media)
+        await db.commit()
+        return [TitleResponse.model_validate(t) for t in similar]
     except Exception as exc:
         logger.error("tmdb_similar_failed", error=str(exc))
-        tmdb_ids = []
-
-    if not tmdb_ids:
         return []
-
-    result = await db.execute(select(Title).where(Title.tmdb_id.in_(tmdb_ids)))
-    similar_titles = result.scalars().all()
-    return [TitleResponse.model_validate(t) for t in similar_titles]
 
 
 @router.post("/sync", status_code=status.HTTP_202_ACCEPTED)
 async def trigger_sync(admin_user: AdminUser):
     logger.info("tmdb_sync_triggered", admin_id=str(admin_user.id))
-    # In production, dispatch a Celery task
     return {"message": "TMDb sync task has been queued"}

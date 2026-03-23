@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -24,7 +24,7 @@ class TitleResponse(BaseModel):
     overview: str | None = None
     poster_path: str | None = None
     backdrop_path: str | None = None
-    release_date: str | None = None
+    release_date: date | str | None = None
     vote_average: float | None = None
     vote_count: int | None = None
     popularity: float | None = None
