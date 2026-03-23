@@ -138,7 +138,7 @@ const _moodOptions = [
 
 const _timeOptions = [
   _OptionData('quick', 'Quick\n< 1 hour', '⚡', Color(0xFFFBBF24)),
-  _OptionData('standard', 'Standard\n1-2 hours', '🎬', Color(0xFF6C63FF)),
+  _OptionData('standard', 'Standard\n1-2 hours', '🎬', Color(0xFF7C3AED)),
   _OptionData('long', 'Long\n2+ hours', '🍿', Color(0xFFEC4899)),
   _OptionData('marathon', 'All Night\nMarathon', '🌙', Color(0xFF8B5CF6)),
 ];

@@ -232,7 +232,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         width: 48,
         height: 48,
         decoration: BoxDecoration(
-          gradient: AppColors.primaryGradient,
+          gradient: AppColors.brandGradient,
           borderRadius: BorderRadius.circular(12),
         ),
         child: const Icon(Icons.movie_filter_rounded,

@@ -521,7 +521,7 @@ class _CompletePage extends StatelessWidget {
             width: 100,
             height: 100,
             decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
+              gradient: AppColors.brandGradient,
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.check_rounded,

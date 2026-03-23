@@ -8,6 +8,7 @@ import '../../core/theme/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/recommendation_provider.dart';
 import '../../widgets/recommendation_card.dart';
+import '../../widgets/animated_gradient.dart';
 import '../../widgets/shimmer_loading.dart';
 import '../../widgets/title_card.dart';
 
@@ -240,62 +241,55 @@ class _VibeCheckCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          gradient: AppColors.brandGradient,
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.gradientPurple.withOpacity(0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.2),
+      child: AnimatedGradientBackground(
+        borderRadius: BorderRadius.circular(18),
+        duration: const Duration(seconds: 4),
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.2),
+                ),
+                child: const Center(
+                  child: Text('\u{1F3AF}', style: TextStyle(fontSize: 24)),
+                ),
               ),
-              child: const Center(
-                child: Text('🎯', style: TextStyle(fontSize: 24)),
-              ),
-            ),
-            const SizedBox(width: 14),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Vibe Check',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Vibe Check',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    "Can't decide? Let us pick for you!",
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.white70,
-                      fontWeight: FontWeight.w500,
+                    SizedBox(height: 2),
+                    Text(
+                      "Can't decide? Let us pick for you!",
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.white70,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const Icon(Icons.arrow_forward_rounded,
-                color: Colors.white, size: 22),
-          ],
+              const Icon(Icons.arrow_forward_rounded,
+                  color: Colors.white, size: 22),
+            ],
+          ),
         ),
-      ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.1, duration: 500.ms),
-    );
+      ),
+    ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.1, duration: 500.ms);
   }
 }

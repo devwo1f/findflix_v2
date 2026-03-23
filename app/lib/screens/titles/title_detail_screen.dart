@@ -60,7 +60,7 @@ class _TitleDetailScreenState extends ConsumerState<TitleDetailScreen> {
             slivers: [
               // ── Hero / Trailer ────────────────────────────────
               SliverAppBar(
-                expandedHeight: title.trailerKey != null ? 360 : 320,
+                expandedHeight: title.trailerKey != null ? 420 : 320,
                 pinned: true,
                 backgroundColor: AppColors.background,
                 flexibleSpace: FlexibleSpaceBar(
@@ -68,7 +68,6 @@ class _TitleDetailScreenState extends ConsumerState<TitleDetailScreen> {
                       ? TrailerPlayer(
                           youtubeKey: title.trailerKey!,
                           backdropUrl: title.backdropUrl,
-                          height: 360,
                         )
                       : Stack(
                           fit: StackFit.expand,
